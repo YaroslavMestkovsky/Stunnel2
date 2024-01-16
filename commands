@@ -3,3 +3,6 @@ docker run -p 8080:80 -d --name njinx-server -it --rm server:njinx
 
 docker build -t client:ubunty -f client/Dockerfile .
 docker run -d --name client -it --rm client:ubunty
+
+docker-compose build
+docker-compose up -d

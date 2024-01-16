@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  ubuntu:
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
+    image: ubuntu:client
+    container_name: client
+    networks:
+      - bridge
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
+    image: nginx:server
+    container_name: server
+    ports:
+      - "80:80"
+    networks:
+      - bridge
+networks:
+  bridge:
