@@ -6,3 +6,15 @@ docker run -d --name client -it --rm client:ubunty
 
 docker-compose build
 docker-compose up -d
+
+create pim:
+
+openssl genrsa -out key.pem 2048
+openssl req -new -x509 -key key.pem -out cert.pem -days 1095
+cat key.pem cert.pem >> /etc/stunnel/stunnel.pem
+
+client stunnel on pc:
+sudo /etc/init.d/stunnel4 start
+sudo /etc/init.d/stunnel4 restart
+check logs:
+systemctl status stunnel4.service
