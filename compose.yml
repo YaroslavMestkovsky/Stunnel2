@@ -22,15 +22,5 @@ services:
     networks:
       - bridge
 
-  stunnel:
-    build:
-      context: .
-      dockerfile: ./stunnel_bridge/Dockerfile
-    container_name: stunnel
-    ports:
-      - "8888:8888"
-    networks:
-      - bridge
-
 networks:
   bridge:
