@@ -1,24 +1,25 @@
 version: '3'
 
 services:
-  ubuntu:
+  nginx-client:
     build:
       context: .
       dockerfile: ./client/Dockerfile
-    image: ubuntu:client
+    image: nginx:client
     container_name: client
     networks:
       - bridge
+    depends_on:
+      - nginx-server
+    ports:
+      - "85:85"
 
-  nginx:
+  nginx-server:
     build:
       context: .
       dockerfile: ./server/Dockerfile
     image: nginx:server
     container_name: server
-    ports:
-      - "80:80"
-      - "443:443" #Это точно нужно?
     networks:
       - bridge
 

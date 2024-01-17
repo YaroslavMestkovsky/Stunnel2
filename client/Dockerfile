@@ -1,6 +1,5 @@
-FROM ubuntu:latest
-LABEL authors="yaroslav"
+FROM nginx:latest
 
-RUN apt-get update && apt-get install -y curl
+COPY config/nginx.conf /etc/nginx/nginx.conf
 
-ENTRYPOINT ["top", "-b"]
+CMD ["nginx", "-g", "daemon off;"]
