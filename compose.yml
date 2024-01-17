@@ -12,7 +12,8 @@ services:
     depends_on:
       - nginx-server
     ports:
-      - "8080:8081"
+#      - "8080:8081"
+      - "443:443"
 
   nginx-server:
     build:

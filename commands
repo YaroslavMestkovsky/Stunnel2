@@ -18,3 +18,5 @@ sudo /etc/init.d/stunnel4 start
 sudo /etc/init.d/stunnel4 restart
 check logs:
 systemctl status stunnel4.service
+or
+service stunnel4 status
