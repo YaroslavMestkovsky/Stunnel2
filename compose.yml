@@ -1,18 +1,17 @@
 version: '3'
 
 services:
-  nginx-client:
+  ubuntu-client:
     build:
       context: .
       dockerfile: ./client/Dockerfile
-    image: nginx:client
+    image: ubuntu:client
     container_name: client
     networks:
       - bridge
     depends_on:
       - nginx-server
     ports:
-#      - "8080:8081"
       - "443:443"
 
   nginx-server:
