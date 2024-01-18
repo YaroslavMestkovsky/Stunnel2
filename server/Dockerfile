@@ -2,7 +2,7 @@ FROM ubuntu:latest
 
 RUN apt-get update
 
-RUN apt-get update && apt-get install ca-certificates stunnel4 -y
+RUN apt-get update && apt-get install -y ca-certificates net-tools lsof nano stunnel4
 
 RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 \
     -subj "/C=RU/ST=VLG/L=Volgograd/O=OBT/CN=192.168.48.3" \
