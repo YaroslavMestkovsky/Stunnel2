@@ -1,13 +1,21 @@
-# Контейнер с NJINX. Отдает html-ку. Сюда можно будет попасть только через stunnel из другого докера.
-FROM nginx:latest
+FROM ubuntu:latest
 
-# Ставим stunnel
-#RUN apt-get update && apt-get install -y stunnel
+RUN apt-get update
 
-EXPOSE 80
-EXPOSE 443
+RUN apt-get update && apt-get install ca-certificates stunnel4 -y
 
-# Рисуем кастомное сообщение об успехе
-COPY html/index.html /usr/share/nginx/html
+RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 \
+    -subj "/C=RU/ST=VLG/L=Volgograd/O=OBT/CN=192.168.48.3" \
+    -keyout /etc/stunnel/stunnel.pem  -out /etc/stunnel/stunnel.pem
 
-CMD ["nginx", "-g", "daemon off;"]
+RUN cp /etc/stunnel/stunnel.pem /etc/ssl/certs/ && update-ca-certificates \
+    chown root:root /etc/stunnel/stunnel.pem \
+    chmod 400 /etc/stunnel/stunnel.pem
+
+RUN touch /etc/stunnel/stunnel.pid
+
+RUN echo ENABLED=1 >> /etc/default/stunnel4 && service stunnel4 restart
+
+COPY ../configs/stunnel.conf /etc/stunnel/
+
+CMD ["stunnel", "/etc/stunnel/stunnel.conf"]
