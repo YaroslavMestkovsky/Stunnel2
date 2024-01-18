@@ -7,6 +7,8 @@ services:
       dockerfile: ./client/Dockerfile
     image: ubuntu:client
     container_name: client
+    ports:
+      - "443:443"
     networks:
       bridge:
         ipv4_address: 192.168.48.3
