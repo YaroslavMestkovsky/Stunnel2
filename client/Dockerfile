@@ -1,6 +1,7 @@
 FROM ubuntu:latest
 
-RUN apt-get update && apt-get install -y stunnel4 curl
+# потом убрать курл и нано
+RUN apt-get update && apt-get install -y stunnel4 curl nano
 
 EXPOSE 443
 
