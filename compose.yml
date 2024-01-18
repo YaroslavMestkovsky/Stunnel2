@@ -8,11 +8,10 @@ services:
     image: ubuntu:client
     container_name: client
     networks:
-      - bridge
+      bridge:
+        ipv4_address: 192.168.48.3
     depends_on:
       - nginx-server
-    ports:
-      - "443:443"
 
   nginx-server:
     build:
@@ -21,7 +20,12 @@ services:
     image: nginx:server
     container_name: server
     networks:
-      - bridge
+      bridge:
+        ipv4_address: 192.168.48.2
 
 networks:
   bridge:
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.48.0/24
