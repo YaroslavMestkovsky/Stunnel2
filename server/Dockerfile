@@ -4,7 +4,7 @@ EXPOSE 443
 
 RUN apt-get update
 
-RUN apt-get update && apt-get install -y ca-certificates net-tools lsof nano stunnel4
+RUN apt-get update && apt-get install -y ca-certificates net-tools lsof nano curl stunnel4
 
 RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 \
     -subj "/C=RU/ST=VLG/L=Volgograd/O=OBT/CN=192.168.48.3" \
@@ -15,6 +15,7 @@ RUN cp /etc/stunnel/stunnel.pem /etc/ssl/certs/ && update-ca-certificates \
     chmod 400 /etc/stunnel/stunnel.pem
 
 RUN touch /etc/stunnel/stunnel.pid
+RUN touch /etc/stunnel/stunnel.log
 
 RUN echo ENABLED=1 >> /etc/default/stunnel4
 
