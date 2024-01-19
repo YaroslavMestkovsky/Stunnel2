@@ -1,56 +1,63 @@
 FROM ubuntu:latest
 
-ENV STUNNEL_VERSION=5.72b3
-ENV OPENSSL_VERSION=3.2.0
-
 EXPOSE 443
 
 RUN apt-get update
 
-RUN apt-get update && apt-get install -y ca-certificates net-tools lsof nano build-essential wget #stunnel4
+# Вспомогательные пакеты для тестов
+RUN apt-get update && apt-get install -y ca-certificates net-tools lsof nano
 
-# OpenSSL 3.2.0
-RUN wget https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz \
-    && tar -zxvf openssl-${OPENSSL_VERSION}.tar.gz
+# Зависимости для OpenSSL
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential libssl-dev wget perl-modules && \
+    rm -rf /var/lib/apt/lists/*
 
-# Ставим
-RUN cd openssl-${OPENSSL_VERSION} \
-    && ./config \
-    && make \
-    && make install \
-    && ldconfig
+# Архив Stunnel
+COPY ../tars/stunnel-5.71.tar.gz /tmp/
 
-# Stunnel 5.72b3
-RUN wget https://www.stunnel.org/downloads/stunnel-${STUNNEL_VERSION}.tar.gz \
-    && tar -zxvf stunnel-${STUNNEL_VERSION}.tar.gz
+# OpenSSL
+#RUN cd /tmp/ && \
+#    tar -zxvf openssl-3.2.0.tar.gz && \
+#    cd openssl-3.2.0 && \
+#    ./config && \
+#    make && \
+#    make install && \
+#    cd /tmp/ && \
+#    rm -rf openssl-3.2.0.tar.gz openssl-3.2.0
 
-# Ставим
-RUN cd stunnel-${STUNNEL_VERSION} \
-    && ./configure --with-ssl=/usr/local/ssl \
-    && make \
-    && make install
+# Stunnel
+RUN cd /tmp/ && \
+    tar -zxvf stunnel-5.71.tar.gz && \
+    cd stunnel-5.71 && \
+    ./configure && \
+    make && \
+    make install && \
+    cd /tmp/ && \
+    rm -rf stunnel-5.71.tar.gz stunnel-5.71
 
-# Чистим
-RUN rm -rf /openssl-${OPENSSL_VERSION} \
-    && rm -rf /stunnel-${STUNNEL_VERSION} \
-    && rm -f /stunnel-${STUNNEL_VERSION}.tar.gz \
-    && apt-get remove -y build-essential wget \
-    && apt-get autoremove -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Чистим все
+RUN apt-get purge -y --auto-remove build-essential libssl-dev wget && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
+# Создаем самоподписанный сертификат...
 RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 \
     -subj "/C=RU/ST=VLG/L=Volgograd/O=OBT/CN=192.168.48.3" \
-    -keyout /etc/stunnel/stunnel.pem  -out /etc/stunnel/stunnel.pem
+    -keyout /usr/local/etc/stunnel/stunnel.pem  -out /usr/local/etc/stunnel/stunnel.pem
 
-RUN cp /etc/stunnel/stunnel.pem /etc/ssl/certs/ && update-ca-certificates \
-    chown root:root /etc/stunnel/stunnel.pem \
-    chmod 400 /etc/stunnel/stunnel.pem
+# ...и добавляем его в доверенные, прокидывая права
+RUN cp /usr/local/etc/stunnel/stunnel.pem /etc/ssl/certs/ && update-ca-certificates \
+    chown root:root /usr/local/etc/stunnel/stunnel.pem \
+    chmod 400 /usr/local/etc/stunnel/stunnel.pem
 
-RUN touch /etc/stunnel/stunnel.pid
+# Создаем pid. Нужен для stunnel
+RUN touch /usr/local/etc/stunnel/stunnel.pid
 
-RUN echo ENABLED=1 >> /etc/default/stunnel4 && service stunnel4 restart
+# Разрешаем работу stunnel-а
+#RUN echo ENABLED=1 >> /etc/default/stunnel4 && service stunnel4 restart
 
-COPY ../configs/stunnel.conf /etc/stunnel/
+# Прокидываем конфиг stunnel-а
+COPY ../configs/stunnel.conf /usr/local/etc/stunnel/
+COPY ../configs/stunnel.pem /usr/local/etc/stunnel/
 
-CMD ["stunnel", "/etc/stunnel/stunnel.conf"]
+CMD ["stunnel", "/usr/local/etc/stunnel/stunnel.conf"]
