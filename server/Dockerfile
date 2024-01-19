@@ -16,8 +16,8 @@ RUN cp /etc/stunnel/stunnel.pem /etc/ssl/certs/ && update-ca-certificates \
 
 RUN touch /etc/stunnel/stunnel.pid
 
-RUN echo ENABLED=1 >> /etc/default/stunnel4 && service stunnel4 restart
+RUN echo ENABLED=1 >> /etc/default/stunnel4
 
 COPY ../configs/stunnel.conf /etc/stunnel/
 
-CMD ["stunnel", "/etc/stunnel/stunnel.conf"]
+CMD ["stunnel"]
