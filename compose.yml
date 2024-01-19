@@ -4,7 +4,7 @@ services:
     container_name: server
     build:
       context: .
-      dockerfile: /server/Dockerfile
+      dockerfile: ./server/Dockerfile
     networks:
       bridge:
         ipv4_address: 192.168.48.3
