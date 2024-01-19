@@ -2,9 +2,10 @@ FROM ubuntu:latest
 
 EXPOSE 443
 
-RUN apt-get update
-
-RUN apt-get update && apt-get install -y ca-certificates net-tools lsof nano curl stunnel4
+#net-tools lsof nano curl - отладка, убрать в конце
+RUN apt-get update && \
+    apt-get install -y ca-certificates net-tools lsof nano curl stunnel4 nginx && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 \
     -subj "/C=RU/ST=VLG/L=Volgograd/O=OBT/CN=192.168.48.3" \
@@ -19,6 +20,7 @@ RUN touch /etc/stunnel/stunnel.log
 
 RUN echo ENABLED=1 >> /etc/default/stunnel4
 
+COPY ../configs/nginx.conf /etc/nginx/sites-available/default
 COPY ../configs/stunnel.conf /etc/stunnel/
 
-CMD ["stunnel"]
+CMD ["sh", "-c", "stunnel & nginx -g 'daemon off;'"]
