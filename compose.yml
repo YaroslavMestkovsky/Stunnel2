@@ -9,20 +9,11 @@ services:
       bridge:
         ipv4_address: 192.168.48.3
     ports:
-      - "443:443"
+      - "8088:8088"
     volumes:
-      - ./configs/stunnel.conf:/etc/stunnel/stunnel.conf
-    depends_on:
-      - content
-
-  content:
-    container_name: content_server
-    build:
-      context: .
-      dockerfile: ./content_server/Dockerfile
-    networks:
-      bridge:
-        ipv4_address: 192.168.48.4
+      - ./configs/stunnel.conf:/etc/opt/cprocsp/stunnel/stunnel.conf
+      - ./configs/:/etc/stunnel/
+      - ./keys/:/keys/
 
 networks:
   bridge:
