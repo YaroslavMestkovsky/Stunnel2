@@ -27,71 +27,94 @@ check_stunnel() {
     fi
 }
 
-# Инициализация сервисов (выполняется один раз)
+# Инициализация сервисов
 init_services() {
     echo "Initializing services..."
 
-    # Копируем ключевой контейнер (если нужно)
+    # Копируем ключевые контейнеры из папки keys
     cp -R /keys/* /var/opt/cprocsp/keys/root/ || echo "No keys to copy or copy failed"
 
-    # Перезапускаем cprocsp
+    # Перезапускаем службу cprocsp
     echo "Restarting cprocsp service..."
     service cprocsp restart || echo "Warning: cprocsp restart failed"
 
-    # Устанавливаем сертификаты (с попытками)
+    # Устанавливаем сертификаты
     install_certificates
 }
 
-# Установка сертификатов с повторными попытками
 install_certificates() {
-  # CRL-файлы
-#  [ -f "/etc/stunnel/crl.crl" ] && \
-#      /opt/cprocsp/bin/amd64/certmgr -inst -crl -store mCA -file /etc/stunnel/crl.crl -silent || \
-#      echo "Warning: Failed to install crl.crl"
-#
-#  [ -f "/etc/stunnel/certcrl.crl" ] && \
-#      /opt/cprocsp/bin/amd64/certmgr -inst -crl -store mCA -file /etc/stunnel/certcrl.crl -silent || \
-#      echo "Warning: Failed to install certcrl.crl"
-#
-#  [ -f "/etc/stunnel/certnew.cer" ] && \
-#    /opt/cprocsp/bin/amd64/certmgr -inst -cert -store mCA -file /etc/stunnel/certnew.cer -silent || \
-#    echo "Warning: Failed to install certnew.cer"
-#
-#  [ -f "/etc/stunnel/certnew.p7b" ] && \
-#    /opt/cprocsp/bin/amd64/certmgr -inst -cert -store mCA -file /etc/stunnel/certnew.p7b -silent || \
-#    echo "Warning: Failed to install certnew.p7b"
-#
-#  [ -f "/etc/stunnel/testroot.p7b" ] && \
-#    /opt/cprocsp/bin/amd64/certmgr -inst -cert -store mCA -file /etc/stunnel/testroot.p7b -silent || \
-#    echo "Warning: Failed to install testroot.p7b"
+    local cert_dir="/etc/stunnel"
 
-  # определение контейнера-хранилища закрытых ключей
-  containerName=$(/opt/cprocsp/bin/amd64/csptest -keys -enum -verifyc -fqcn -un | grep 'HDIMAGE' | awk -F'|' '{print $2}' | head -1)
-  # экспорт сертификата для stunnel
-  /opt/cprocsp/bin/amd64/certmgr -export -dest /etc/stunnel/stunnel2.cer -container "${containerName}"
-  # Основной сертификат
-  if [ -f "/etc/stunnel/stunnel.cer" ]; then
-      if yes "o" | /opt/cprocsp/bin/amd64/certmgr -inst -cert -store uRoot -file /etc/stunnel/stunnel2.cer -silent; then
-          echo "Certificate installed successfully"
-          cp /etc/stunnel/stunnel2.cer /root/stunnel2.cer || echo "Warning: Failed to copy certificate"
-      else
-          echo "Warning: Failed to install root certificate"
-      fi
+    # Создаем массив файлов, чтобы правильно обрабатывать пробелы в именах
+    local cert_files=()
 
-      if yes "o" | /opt/cprocsp/bin/amd64/certmgr -inst -cert -store uMy -file /etc/stunnel/stunnel2.cer -silent; then
-          echo "Certificate installed successfully"
-          cp /etc/stunnel/stunnel2.cer /root/stunnel2.cer || echo "Warning: Failed to copy certificate"
-      else
-          echo "Warning: Failed to install root certificate"
-      fi
-      # Дружим между собой ключи и открытые сертификаты
-      /opt/cprocsp/bin/amd64/csptestf -absorb -certs
-  else
-      echo "Error: Certificate file /etc/stunnel/stunnel.cer not found"
-  fi
+    while IFS= read -r -d $'\0' file; do
+        cert_files+=("$file")
+    done < <(find "$cert_dir" -maxdepth 1 -type f \( -name "*.cer" -o -name "*.crt" -o -name "*.pem" -o -name "*.pfx" -o -name "*.crl" -o -name "*.p7b" \) -print0)
+
+    for cert_file in "${cert_files[@]}"; do
+        local cert_name=$(basename "$cert_file")
+        local cert_path="$cert_file"  # Используем полный путь
+
+        # Определяем тип сертификата по имени файла
+        if [[ "$cert_name" == client.* ]]; then
+            echo "Установка КЛИЕНТСКОГО сертификата: $cert_name"
+
+            # Установка клиентского сертификата хранилище uRoot
+            if ! /opt/cprocsp/bin/amd64/certmgr -inst -cert -store uRoot -file "$cert_path" -silent; then
+                echo "Ошибка установки клиентского сертификата в uRoot: $cert_name"
+            else echo "Успешная установка клиентского сертификата в uRoot"
+            fi
+
+            # Установка клиентского сертификата в хранилище uMy
+            if ! /opt/cprocsp/bin/amd64/certmgr -inst -cert -store uMy -file "$cert_path" -silent; then
+                echo "Ошибка установки в uMy: $cert_name"
+            else echo "Успешная установка клиентского сертификата в uMy"
+            fi
+
+            # Нахождение имени контейнера с закрытыми ключами
+            containerName=$(/opt/cprocsp/bin/amd64/csptest -keys -enum -verifyc -fqcn -un | grep 'HDIMAGE' | awk -F'|' '{print $2}' | head -1)
+
+            # Экспорт сертификата для stunnel
+            if [ -n "$containerName" ]; then
+                /opt/cprocsp/bin/amd64/certmgr -export -dest "$cert_path" -container "$containerName"
+            else
+                echo "Не найден контейнер ключей"
+            fi
+            # Дружим между собой ключи и открытые сертификаты
+            /opt/cprocsp/bin/amd64/csptestf -absorb -certs
+
+            continue
+        fi
+
+        if [[ "$cert_name" == *.p7b ]]; then
+            echo "Установка цепочки сертификатов: $cert_name"
+            if ! /opt/cprocsp/bin/amd64/certmgr -inst -cert -file "$cert_path" -silent; then
+                echo "Ошибка установки цепочки сертификатов: $cert_name"
+            else echo "Успешно установлена цепочка сертификатов: $cert_name"
+            fi
+            continue
+        fi
+
+        if [[ "$cert_name" == *.crl ]]; then
+            echo "Установка CA сертификата: $cert_name"
+            if ! /opt/cprocsp/bin/amd64/certmgr -inst -crl -store mCA -file "$cert_path" -silent; then
+                echo "Ошибка установки CA сертификата: $cert_name"
+            else echo "Успешно установлен CA сертификат: $cert_name"
+            fi
+            contunue
+        else
+            echo "Установка CA сертификата: $cert_name"
+            if ! /opt/cprocsp/bin/amd64/certmgr -inst -cert -store mCA -file "$cert_path" -silent; then
+                echo "Ошибка установки CA сертификата: $cert_name"
+            else echo "Успешно установлен CA сертификат: $cert_name"
+            fi
+            continue
+        fi
+    done
 }
 
-# Главный бесконечный цикл
+# Главный бесконечный цикл проверяющий работу Stunnel'а
 main_loop() {
     while true; do
         if $STUNNEL_RUNNING; then
@@ -99,7 +122,7 @@ main_loop() {
         else
             start_stunnel
         fi
-        sleep 5
+        sleep 60
     done
 }
 

@@ -23,7 +23,6 @@ COPY linux-amd64_deb.tgz /tmp/linux-amd64_deb.tgz
 RUN tar xvf /tmp/linux-amd64_deb.tgz -C /tmp && \
     cd /tmp/linux-amd64_deb && \
     ./install.sh kc2 && \
-#    ./install.sh && \
     dpkg -i cprocsp-stunnel-64_5.0.13455-7_amd64.deb && \
     rm -rf /tmp/linux-amd64_deb /tmp/linux-amd64_deb.tgz
 
